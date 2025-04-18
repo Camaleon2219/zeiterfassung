@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Zeiterfassung</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #063970;
+      padding: 2rem;
+      max-width: 700px;
+      margin: auto;
+      text-align: center;
+    }
+    h1 {
+      color: #1f2937;
+    }
+    .info, .weekly {
+      margin: 1rem 0;
+      font-size: 1.1rem;
+    }
+    button {
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      margin: 0.3rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 20px;
+    }
+    #startBtn { background-color: #10b981; color: white; }
+    #stopBtn { background-color: #ef4444; color: white; }
+    #resetBtn { background-color: #6b7280; color: white; }
+    .result { margin-top: 1rem; font-weight: bold; }
+    .log, .weekly-summary {
+      margin-top: 2rem;
+      text-align: left;
+    }
+    .log-entry, .weekly-entry {
+      background: white;
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .short {
+      color: red;
+      font-weight: bold;
+    }
+    .long {
+      color: green;
+      font-weight: bold;
+    }
+    .digital-clock {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      background-color: #fff;
+      padding: 0.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>🕒 Zeiterfassung</h1>
+
+  <div class="info">
+    <p><strong>Startzeit:</strong> <span id="startTime">--:--:--</span></p>
+    <p><strong>Endzeit:</strong> <span id="endTime">--:--:--</span></p>
+    <p class="result"><strong>Gesamtzeit:</strong> <span id="totalTime">--</span></p>
+  </div>
+
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stopp</button>
+  <button id="resetBtn">Alle löschen</button>
+
+  <div class="log" id="logList">
+    <h2>📋 Verlauf</h2>
+  </div>
+
+  <div class="weekly-summary" id="weeklySummary">
+    <h2>🗓️ Wochenübersicht</h2>
+  </div>
+
+  <div id="digitalClock" class="digital-clock"></div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const startTimeDisplay = document.getElementById('startTime');
+    const endTimeDisplay = document.getElementById('endTime');
+    const totalTimeDisplay = document.getElementById('totalTime');
+    const logList = document.getElementById('logList');
+    const weeklySummary = document.getElementById('weeklySummary');
+
+    let startTime = null;
+    let intervalId = null;
+    const weekdayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+
+    function getWeekdayName(date) {
+      return weekdayNames[date.getDay()];
+    }
+
+    function parseDate(dateStr) {
+      const parts = dateStr.split(".");
+      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    }
+
+    function formatDuration(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    }
+
+    function startLiveTimer() {
+      intervalId = setInterval(() => {
+        const now = new Date();
+        const elapsed = now - startTime;
+        totalTimeDisplay.textContent = formatDuration(elapsed);
+      }, 1000);
+    }
+
+    window.onload = () => {
+      const savedStart = localStorage.getItem('startTime');
+      if (savedStart) {
+        startTime = new Date(savedStart);
+        startTimeDisplay.textContent = startTime.toLocaleTimeString();
+        endTimeDisplay.textContent = '--:--:--';
+        startLiveTimer(); // ⏱️ Timer weiterlaufen lassen
+      }
+
+      loadLogs();
+    };
+
+    startBtn.onclick = () => {
+      startTime = new Date();
+      localStorage.setItem('startTime', startTime);
+      startTimeDisplay.textContent = startTime.toLocaleTimeString();
+      endTimeDisplay.textContent = '--:--:--';
+      totalTimeDisplay.textContent = '--';
+      startLiveTimer();
+    };
+
+    stopBtn.onclick = () => {
+      if (!startTime) {
+        alert("Du musst zuerst auf 'Start' drücken!");
+        return;
+      }
+
+      const endTime = new Date();
+      const durationMs = endTime - startTime;
+
+      endTimeDisplay.textContent = endTime.toLocaleTimeString();
+      totalTimeDisplay.textContent = formatDuration(durationMs);
+
+      const logEntry = {
+        start: startTime.toLocaleTimeString(),
+        end: endTime.toLocaleTimeString(),
+        durationMs: durationMs,
+        duration: formatDuration(durationMs),
+        date: new Date().toLocaleDateString(),
+        weekday: getWeekdayName(startTime)
+      };
+
+      const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+      logs.unshift(logEntry);
+      localStorage.setItem('logs', JSON.stringify(logs));
+
+      addLogToList(logEntry);
+      updateWeeklySummary(logs);
+
+      clearInterval(intervalId);
+      intervalId = null;
+      localStorage.removeItem('startTime');
+      startTime = null;
+    };
+
+    resetBtn.onclick = () => {
+      if (confirm("Willst du wirklich alle Einträge löschen?")) {
+        localStorage.removeItem('logs');
+        logList.innerHTML = '<h2>📋 Verlauf</h2>';
+        weeklySummary.innerHTML = '<h2>🗓️ Wochenübersicht</h2>';
+      }
+    };
+
+    function loadLogs() {
+      const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+      logs.forEach(addLogToList);
+      updateWeeklySummary(logs);
+    }
+
+    function addLogToList(entry) {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+
+      // Dauer-Klasse abhängig von Länge
+      const colorClass = entry.durationMs < 5000 ? 'short' : 'long';
+
+      div.innerHTML = `
+        <strong>${entry.weekday}, ${entry.date}</strong><br>
+        Start: ${entry.start} <br>
+        Ende: ${entry.end} <br>
+        Dauer: <strong class="${colorClass}">${entry.duration}</strong>
+      `;
+      logList.appendChild(div);
+    }
+
+    function updateWeeklySummary(logs) {
+      const weeklyTotals = {};
+
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      logs.forEach(entry => {
+        const entryDate = parseDate(entry.date);
+        if (entryDate >= weekStart && entryDate <= weekEnd) {
+          if (!weeklyTotals[entry.weekday]) {
+            weeklyTotals[entry.weekday] = 0;
+          }
+          weeklyTotals[entry.weekday] += entry.durationMs;
+        }
+      });
+
+      let summaryHTML = `<h2>🗓️ Woche vom ${weekStart.toLocaleDateString()} bis ${weekEnd.toLocaleDateString()}</h2>`;
+
+      weekdayNames.forEach(day => {
+        if (weeklyTotals[day]) {
+          const ms = weeklyTotals[day];
+          summaryHTML += `<div class="weekly-entry"><strong>${day}:</strong> ${formatDuration(ms)}</div>`;
+        }
+      });
+
+      weeklySummary.innerHTML = summaryHTML;
+    }
+
+    // Digitale Uhr
+    function updateDigitalClock() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+      const timeString = `${hours}:${minutes}:${seconds}`;
+      document.getElementById('digitalClock').textContent = timeString;
+    }
+
+    // Uhr jede Sekunde aktualisieren
+    setInterval(updateDigitalClock, 1000);
+
+    // Initiale Anzeige
+    updateDigitalClock();
+  </script>
+</body>
+</html>
