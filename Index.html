@@ -1,262 +1,219 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <title>Zeiterfassung</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #063970;
-      padding: 2rem;
-      max-width: 700px;
-      margin: auto;
-      text-align: center;
-    }
-    h1 {
-      color: #1f2937;
-    }
-    .info, .weekly {
-      margin: 1rem 0;
-      font-size: 1.1rem;
-    }
-    button {
-      padding: 0.8rem 1.5rem;
-      font-size: 1rem;
-      margin: 0.3rem;
-      cursor: pointer;
-      border: none;
-      border-radius: 20px;
-    }
-    #startBtn { background-color: #10b981; color: white; }
-    #stopBtn { background-color: #ef4444; color: white; }
-    #resetBtn { background-color: #6b7280; color: white; }
-    .result { margin-top: 1rem; font-weight: bold; }
-    .log, .weekly-summary {
-      margin-top: 2rem;
-      text-align: left;
-    }
-    .log-entry, .weekly-entry {
-      background: #042649;
-      padding: 0.8rem;
-      border-radius: 6px;
-      margin-bottom: 0.5rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    .short {
-      color: red;
-      font-weight: bold;
-    }
-    .long {
-      color: green;
-      font-weight: bold;
-    }
-    .digital-clock {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #333;
-      background-color: #fff;
-      padding: 0.5rem;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-  </style>
-</head>
-<body>
-  <h1>🕒 Zeiterfassung</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zeiterfassung Modern</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gradient-to-br from-blue-800 to-blue-400 min-h-screen text-white font-sans">
+    <div class="max-w-3xl mx-auto py-10 px-4">
+      <div class="bg-white rounded-2xl shadow-lg p-6 text-gray-900">
+        <h1 class="text-3xl font-bold mb-6 text-center">🕒 Zeiterfassung</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Startzeit</p>
+            <p id="startTime" class="text-xl font-bold">--:--:--</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Endzeit</p>
+            <p id="endTime" class="text-xl font-bold">--:--:--</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Gesamtzeit</p>
+            <p id="totalTime" class="text-xl font-bold">--</p>
+          </div>
+        </div>
 
-  <div class="info">
-    <p><strong>Startzeit:</strong> <span id="startTime">--:--:--</span></p>
-    <p><strong>Endzeit:</strong> <span id="endTime">--:--:--</span></p>
-    <p class="result"><strong>Gesamtzeit:</strong> <span id="totalTime">--</span></p>
-  </div>
+        <div class="flex justify-center space-x-3 mb-6">
+          <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-full">Start</button>
+          <button id="stopBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full">Stopp</button>
+          <button id="resetBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full">Reset</button>
+          <button id="exportPdfBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full">PDF Export</button>
+        </div>
 
-  <button id="startBtn">Start</button>
-  <button id="stopBtn">Stopp</button>
-  <button id="resetBtn">Alle löschen</button>
+        <div id="digitalClock" class="text-center text-lg font-mono mb-4 text-blue-600"></div>
 
-  <div class="log" id="logList">
-    <h2>📋 Verlauf</h2>
-  </div>
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold mb-2">📋 Verlauf</h2>
+          <div id="logList" class="space-y-2"></div>
+        </div>
 
-  <div class="weekly-summary" id="weeklySummary">
-    <h2>🗓️ Wochenübersicht</h2>
-  </div>
+        <div>
+          <h2 class="text-2xl font-bold mb-2">🗓️ Wochenübersicht</h2>
+          <div id="weeklySummary" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
 
-  <div id="digitalClock" class="digital-clock"></div>
+    <script>
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const exportPdfBtn = document.getElementById('exportPdfBtn');
+      const startTimeDisplay = document.getElementById('startTime');
+      const endTimeDisplay = document.getElementById('endTime');
+      const totalTimeDisplay = document.getElementById('totalTime');
+      const logList = document.getElementById('logList');
+      const weeklySummary = document.getElementById('weeklySummary');
 
-  <script>
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const startTimeDisplay = document.getElementById('startTime');
-    const endTimeDisplay = document.getElementById('endTime');
-    const totalTimeDisplay = document.getElementById('totalTime');
-    const logList = document.getElementById('logList');
-    const weeklySummary = document.getElementById('weeklySummary');
+      let startTime = null;
+      let intervalId = null;
+      const weekdayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
-    let startTime = null;
-    let intervalId = null;
-    const weekdayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      function getWeekdayName(date) {
+        return weekdayNames[date.getDay()];
+      }
 
-    function getWeekdayName(date) {
-      return weekdayNames[date.getDay()];
-    }
+      function parseDate(dateStr) {
+        const parts = dateStr.split(".");
+        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      }
 
-    function parseDate(dateStr) {
-      const parts = dateStr.split(".");
-      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-    }
+      function formatDuration(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+      }
 
-    function formatDuration(ms) {
-      const seconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    }
+      function startLiveTimer() {
+        intervalId = setInterval(() => {
+          const now = new Date();
+          const elapsed = now - startTime;
+          totalTimeDisplay.textContent = formatDuration(elapsed);
+        }, 1000);
+      }
 
-    function startLiveTimer() {
-      intervalId = setInterval(() => {
+      function loadLogs() {
+        const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+        logs.forEach(addLogToList);
+        updateWeeklySummary(logs);
+      }
+
+      function addLogToList(entry) {
+        const div = document.createElement('div');
+        div.className = 'p-3 bg-gray-100 rounded-lg shadow-sm';
+        div.innerHTML = `
+          <strong>${entry.weekday}, ${entry.date}</strong><br>
+          Start: ${entry.start} | Ende: ${entry.end} | Dauer: <span class="font-bold ${entry.durationMs < 5000 ? 'text-red-500' : 'text-green-500'}">${entry.duration}</span>
+        `;
+        logList.appendChild(div);
+      }
+
+      function updateWeeklySummary(logs) {
+        const weeklyTotals = {};
         const now = new Date();
-        const elapsed = now - startTime;
-        totalTimeDisplay.textContent = formatDuration(elapsed);
-      }, 1000);
-    }
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
 
-    window.onload = () => {
-      const savedStart = localStorage.getItem('startTime');
-      if (savedStart) {
-        startTime = new Date(savedStart);
-        startTimeDisplay.textContent = startTime.toLocaleTimeString();
-        endTimeDisplay.textContent = '--:--:--';
-        startLiveTimer(); // ⏱️ Timer weiterlaufen lassen
+        logs.forEach(entry => {
+          const entryDate = parseDate(entry.date);
+          if (entryDate >= weekStart && entryDate <= weekEnd) {
+            if (!weeklyTotals[entry.weekday]) weeklyTotals[entry.weekday] = 0;
+            weeklyTotals[entry.weekday] += entry.durationMs;
+          }
+        });
+
+        weeklySummary.innerHTML = '';
+        weekdayNames.forEach(day => {
+          if (weeklyTotals[day]) {
+            const div = document.createElement('div');
+            div.className = 'p-3 bg-blue-100 text-blue-800 rounded-lg shadow-sm';
+            div.innerHTML = `<strong>${day}:</strong> ${formatDuration(weeklyTotals[day])}`;
+            weeklySummary.appendChild(div);
+          }
+        });
       }
 
-      loadLogs();
-    };
-
-    startBtn.onclick = () => {
-      startTime = new Date();
-      localStorage.setItem('startTime', startTime);
-      startTimeDisplay.textContent = startTime.toLocaleTimeString();
-      endTimeDisplay.textContent = '--:--:--';
-      totalTimeDisplay.textContent = '--';
-      startLiveTimer();
-    };
-
-    stopBtn.onclick = () => {
-      if (!startTime) {
-        alert("Du musst zuerst auf 'Start' drücken!");
-        return;
+      function updateDigitalClock() {
+        const now = new Date();
+        document.getElementById('digitalClock').textContent = now.toLocaleTimeString();
       }
 
-      const endTime = new Date();
-      const durationMs = endTime - startTime;
+      setInterval(updateDigitalClock, 1000);
+      updateDigitalClock();
 
-      endTimeDisplay.textContent = endTime.toLocaleTimeString();
-      totalTimeDisplay.textContent = formatDuration(durationMs);
-
-      const logEntry = {
-        start: startTime.toLocaleTimeString(),
-        end: endTime.toLocaleTimeString(),
-        durationMs: durationMs,
-        duration: formatDuration(durationMs),
-        date: new Date().toLocaleDateString(),
-        weekday: getWeekdayName(startTime)
+      window.onload = () => {
+        const savedStart = localStorage.getItem('startTime');
+        if (savedStart) {
+          startTime = new Date(savedStart);
+          startTimeDisplay.textContent = startTime.toLocaleTimeString();
+          endTimeDisplay.textContent = '--:--:--';
+          startLiveTimer();
+        }
+        loadLogs();
       };
 
-      const logs = JSON.parse(localStorage.getItem('logs') || '[]');
-      logs.unshift(logEntry);
-      localStorage.setItem('logs', JSON.stringify(logs));
+      startBtn.onclick = () => {
+        startTime = new Date();
+        localStorage.setItem('startTime', startTime);
+        startTimeDisplay.textContent = startTime.toLocaleTimeString();
+        endTimeDisplay.textContent = '--:--:--';
+        totalTimeDisplay.textContent = '--';
+        startLiveTimer();
+      };
 
-      addLogToList(logEntry);
-      updateWeeklySummary(logs);
+      stopBtn.onclick = () => {
+        if (!startTime) return alert("Bitte zuerst starten.");
 
-      clearInterval(intervalId);
-      intervalId = null;
-      localStorage.removeItem('startTime');
-      startTime = null;
-    };
+        const endTime = new Date();
+        const durationMs = endTime - startTime;
 
-    resetBtn.onclick = () => {
-      if (confirm("Willst du wirklich alle Einträge löschen?")) {
-        localStorage.removeItem('logs');
-        logList.innerHTML = '<h2>📋 Verlauf</h2>';
-        weeklySummary.innerHTML = '<h2>🗓️ Wochenübersicht</h2>';
-      }
-    };
+        endTimeDisplay.textContent = endTime.toLocaleTimeString();
+        totalTimeDisplay.textContent = formatDuration(durationMs);
 
-    function loadLogs() {
-      const logs = JSON.parse(localStorage.getItem('logs') || '[]');
-      logs.forEach(addLogToList);
-      updateWeeklySummary(logs);
-    }
+        const logEntry = {
+          start: startTime.toLocaleTimeString(),
+          end: endTime.toLocaleTimeString(),
+          durationMs,
+          duration: formatDuration(durationMs),
+          date: new Date().toLocaleDateString(),
+          weekday: getWeekdayName(startTime)
+        };
 
-    function addLogToList(entry) {
-      const div = document.createElement('div');
-      div.className = 'log-entry';
+        const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+        logs.unshift(logEntry);
+        localStorage.setItem('logs', JSON.stringify(logs));
 
-      // Dauer-Klasse abhängig von Länge
-      const colorClass = entry.durationMs < 5000 ? 'short' : 'long';
+        addLogToList(logEntry);
+        updateWeeklySummary(logs);
 
-      div.innerHTML = `
-        <strong>${entry.weekday}, ${entry.date}</strong><br>
-        Start: ${entry.start} <br>
-        Ende: ${entry.end} <br>
-        Dauer: <strong class="${colorClass}">${entry.duration}</strong>
-      `;
-      logList.appendChild(div);
-    }
+        clearInterval(intervalId);
+        intervalId = null;
+        localStorage.removeItem('startTime');
+        startTime = null;
+      };
 
-    function updateWeeklySummary(logs) {
-      const weeklyTotals = {};
-
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      logs.forEach(entry => {
-        const entryDate = parseDate(entry.date);
-        if (entryDate >= weekStart && entryDate <= weekEnd) {
-          if (!weeklyTotals[entry.weekday]) {
-            weeklyTotals[entry.weekday] = 0;
-          }
-          weeklyTotals[entry.weekday] += entry.durationMs;
+      resetBtn.onclick = () => {
+        if (confirm("Alle Daten wirklich löschen?")) {
+          localStorage.removeItem('logs');
+          logList.innerHTML = '';
+          weeklySummary.innerHTML = '';
         }
-      });
+      };
 
-      let summaryHTML = `<h2>🗓️ Woche vom ${weekStart.toLocaleDateString()} bis ${weekEnd.toLocaleDateString()}</h2>`;
-
-      weekdayNames.forEach(day => {
-        if (weeklyTotals[day]) {
-          const ms = weeklyTotals[day];
-          summaryHTML += `<div class="weekly-entry"><strong>${day}:</strong> ${formatDuration(ms)}</div>`;
-        }
-      });
-
-      weeklySummary.innerHTML = summaryHTML;
-    }
-
-    // Digitale Uhr
-    function updateDigitalClock() {
-      const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const seconds = now.getSeconds().toString().padStart(2, '0');
-      const timeString = `${hours}:${minutes}:${seconds}`;
-      document.getElementById('digitalClock').textContent = timeString;
-    }
-
-    // Uhr jede Sekunde aktualisieren
-    setInterval(updateDigitalClock, 1000);
-
-    // Initiale Anzeige
-    updateDigitalClock();
-  </script>
-</body>
+      exportPdfBtn.onclick = () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text('Zeiterfassung - Verlauf', 10, 10);
+        const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+        let y = 20;
+        logs.forEach(entry => {
+          doc.text(`${entry.weekday} ${entry.date} | ${entry.start} - ${entry.end} | ${entry.duration}`, 10, y);
+          y += 10;
+          if (y > 270) { doc.addPage(); y = 10; }
+        });
+        doc.save('zeiterfassung.pdf');
+      };
+    </script>
+  </body>
 </html>
